@@ -1,0 +1,17 @@
+# caches
+__pycache__/
+.ruff_cache/
+.venv/
+
+# artifacts
+/out/
+/dist/
+/test/hello/*.exe
+
+# temporary
+.github/workflows/__release-test.yml
+docs/adr/
+
+# os
+.DS_Store
+Thumbs.db

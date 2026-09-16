@@ -1,0 +1,27 @@
+[tools]
+actionlint = "latest"
+hk = "latest"
+pkl = "latest"
+# Oldest Python on the GitHub runners the actions run on
+python = "3.12"
+ruff = "latest"
+# Not called directly; actionlint runs it on the run: blocks in the workflows
+shellcheck = "latest"
+
+[env]
+HK_MISE = 1
+
+[hooks]
+postinstall = "git rev-parse --git-dir >/dev/null 2>&1 && hk install --mise"
+
+[tasks.check]
+description = "Lint, check formatting and run the script self-check"
+run = ["hk check --all", "python test/test_scripts.py"]
+
+[tasks.fix]
+description = "Fix lint and formatting"
+run = "hk fix --all"
+
+[tasks.test]
+description = "Run the script self-check"
+run = "python test/test_scripts.py"

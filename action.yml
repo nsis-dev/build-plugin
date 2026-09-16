@@ -1,0 +1,152 @@
+name: Build NSIS plugin
+description: Build an NSIS plugin from source, package it as a zip and an installer, and attach both to a release
+
+branding:
+  color: purple
+  icon: package
+
+inputs:
+  name:
+    description: Plugin name, i.e. the DLL basename scripts call as Name::Func
+    required: true
+  sources:
+    description: msvc and mingw only; C/C++ source globs (.c, .cpp, .cxx, .cc, .rc)
+  project:
+    description: fpc and rust only; path of the Pascal project file (.dpr, .lpr, .pas) or the plugin's Cargo.toml
+  targets:
+    description: x86-ansi, x86-unicode, amd64-unicode, arm64-unicode
+    default: x86-ansi,x86-unicode
+  toolchain:
+    description: msvc, fpc or rust (Windows runner), mingw (Linux runner)
+    default: msvc
+  crt:
+    description: C/C++ only; static (link the C runtime statically) or none (no CRT, entry point DllMain)
+    default: static
+  release:
+    description: Attach the files to the release that triggered the run; false for a check build with another toolchain
+    default: "true"
+
+outputs:
+  plugins-dir:
+    description: Directory containing Plugins/<target>/<name>.dll
+    value: ${{ steps.vars.outputs.output-dir }}
+  archive:
+    description: Path of the Release Archive
+    value: ${{ steps.archive.outputs.archive }}
+  installer:
+    description: Path of the Plugin Installer
+    value: ${{ steps.installer.outputs.installer }}
+
+runs:
+  using: composite
+  steps:
+    # Runs first: it validates the inputs and publishes the interpreter, so no
+    # later step has to work that out again
+    - name: Resolve inputs
+      id: vars
+      shell: bash
+      env:
+        TOOLCHAIN: ${{ inputs.toolchain }}
+        TARGETS: ${{ inputs.targets }}
+        CRT: ${{ inputs.crt }}
+        SOURCES: ${{ inputs.sources }}
+        PROJECT: ${{ inputs.project }}
+        OUTPUT_DIR: ${{ runner.temp }}/plugins
+      run: ${{ runner.os == 'Windows' && 'python' || 'python3' }} "$GITHUB_ACTION_PATH/scripts/toolchain.py" resolve
+
+    - name: Check layout
+      shell: bash
+      env:
+        NAME: ${{ inputs.name }}
+        PY: ${{ steps.vars.outputs.python }}
+      run: '"$PY" "$GITHUB_ACTION_PATH/scripts/check_layout.py"'
+
+    - name: Restore cached plugin API
+      if: inputs.toolchain != 'rust'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.vars.outputs.plugin-api }}
+        key: nsis-plugin-api-${{ steps.vars.outputs.version }}
+
+    - name: Restore cached Free Pascal
+      if: inputs.toolchain == 'fpc'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.vars.outputs.fpc-dir }}
+        key: fpc-${{ steps.vars.outputs.fpc-version }}-win32-win64
+
+    - name: Build
+      shell: bash
+      env:
+        NAME: ${{ inputs.name }}
+        SOURCES: ${{ inputs.sources }}
+        PROJECT: ${{ inputs.project }}
+        TARGETS: ${{ inputs.targets }}
+        TOOLCHAIN: ${{ inputs.toolchain }}
+        CRT: ${{ inputs.crt }}
+        PLUGIN_API: ${{ steps.vars.outputs.plugin-api }}
+        FPC_DIR: ${{ steps.vars.outputs.fpc-dir }}
+        OUTPUT_DIR: ${{ steps.vars.outputs.output-dir }}
+        PY: ${{ steps.vars.outputs.python }}
+      run: '"$PY" "$GITHUB_ACTION_PATH/scripts/toolchain.py" build'
+
+    - name: Create archive
+      id: archive
+      shell: bash
+      env:
+        NAME: ${{ inputs.name }}
+        PLUGINS_DIR: ${{ steps.vars.outputs.output-dir }}
+        OUTPUT_DIR: ${{ runner.temp }}/dist
+        PY: ${{ steps.vars.outputs.python }}
+      run: '"$PY" "$GITHUB_ACTION_PATH/scripts/archive.py"'
+
+    - name: Setup NSIS
+      uses: nsis-dev/setup-nsis@99783963764acafc24a5e3335ddfce26d03c20a2 # v1.2.1
+      with:
+        version: ${{ steps.vars.outputs.version }}
+
+    - name: Create installer
+      id: installer
+      shell: bash
+      env:
+        NAME: ${{ inputs.name }}
+        VERSION: ${{ steps.archive.outputs.version }}
+        TREE: ${{ steps.archive.outputs.tree }}
+        OUTPUT_DIR: ${{ runner.temp }}/dist
+        PY: ${{ steps.vars.outputs.python }}
+      run: '"$PY" "$GITHUB_ACTION_PATH/scripts/installer.py"'
+
+    # A check build's only output; on a release the same files go to the release instead
+    - name: Upload build
+      if: inputs.release != 'true' || github.event_name != 'release'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.name }}-${{ inputs.toolchain }}
+        path: ${{ runner.temp }}/dist
+        if-no-files-found: error
+
+    - name: Write checksums
+      if: inputs.release == 'true' && github.event_name == 'release'
+      shell: bash
+      working-directory: ${{ runner.temp }}/dist
+      run: sha256sum -- * > SHA256SUMS
+
+    - name: Attest build provenance
+      if: inputs.release == 'true' && github.event_name == 'release'
+      uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+      with:
+        # The DLLs ship compressed inside the archive and the installer, so their own
+        # digests are attested too: that is what a user can verify after extracting one
+        subject-path: |
+          ${{ runner.temp }}/dist/*.zip
+          ${{ runner.temp }}/dist/*.exe
+          ${{ steps.vars.outputs.output-dir }}/Plugins/**/*.dll
+
+    - name: Upload release assets
+      if: inputs.release == 'true' && github.event_name == 'release'
+      shell: bash
+      working-directory: ${{ runner.temp }}/dist
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ github.event.release.tag_name }}
+      run: gh release upload "$TAG" ./* --clobber --repo "$GITHUB_REPOSITORY"

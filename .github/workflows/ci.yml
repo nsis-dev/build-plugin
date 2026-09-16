@@ -1,0 +1,197 @@
+name: Run tests
+
+on:
+  push:
+    paths-ignore: ["**.md", LICENSE]
+  pull_request:
+    paths-ignore: ["**.md", LICENSE]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup mise
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+
+      - name: Check
+        run: hk check --all
+
+  # Runs on the runners' own Python, which is what the actions use
+  unit:
+    name: Script self-check / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run test_scripts.py
+        shell: bash
+        run: ${{ runner.os == 'Windows' && 'python' || 'python3' }} test/test_scripts.py
+
+  # The jobs below check out build-plugin into a subdirectory and copy test/hello to the
+  # workspace root, so the action sees a Plugin repository as a plugin author's would be
+  plugin:
+    name: Plugin / ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolchain: msvc
+            os: windows-latest
+            plugin: HelloC
+            sources: Contrib/HelloC/*.c
+            targets: x86-ansi,x86-unicode,amd64-unicode,arm64-unicode
+          - toolchain: mingw
+            os: ubuntu-latest
+            plugin: HelloC
+            sources: Contrib/HelloC/*.c
+            targets: x86-ansi,x86-unicode,amd64-unicode
+          - toolchain: fpc
+            os: windows-latest
+            plugin: HelloPascal
+            project: Contrib/HelloPascal/Hello.dpr
+            targets: x86-ansi,x86-unicode,amd64-unicode
+          - toolchain: rust
+            os: windows-latest
+            plugin: HelloRust
+            project: Contrib/HelloRust/Cargo.toml
+            targets: x86-ansi,x86-unicode,amd64-unicode,arm64-unicode
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: build-plugin
+
+      - name: Copy test plugin
+        shell: bash
+        run: cp -r build-plugin/test/hello/. .
+
+      - name: Build
+        id: plugin
+        uses: ./build-plugin
+        with:
+          name: ${{ matrix.plugin }}
+          sources: ${{ matrix.sources }}
+          project: ${{ matrix.project }}
+          targets: ${{ matrix.targets }}
+          toolchain: ${{ matrix.toolchain }}
+
+      # Official NSIS only ships x86 stubs, so amd64 and arm64 are checked by PE machine in the build alone
+      - name: Compile hello.nsi
+        shell: bash
+        env:
+          PLUGINS: ${{ steps.plugin.outputs.plugins-dir }}
+          PLUGIN: ${{ matrix.plugin }}
+        run: |
+          set -euo pipefail
+          for target in x86-ansi x86-unicode; do
+            makensis -V2 -DTARGET=$target "-DPLUGINS=$PLUGINS" "-DPLUGIN=$PLUGIN" hello.nsi
+            [ -f "hello-$target.exe" ]
+          done
+
+      - name: Check archive and installer
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          ARCHIVE: ${{ steps.plugin.outputs.archive }}
+          INSTALLER: ${{ steps.plugin.outputs.installer }}
+        run: |
+          set -euo pipefail
+          [ "$(basename "$ARCHIVE")" = "HelloC-${GITHUB_SHA::7}.zip" ]
+          [ "$(basename "$INSTALLER")" = "HelloC-${GITHUB_SHA::7}-setup.exe" ]
+          listing=$(unzip -Z1 "$ARCHIVE")
+          for target in x86-ansi x86-unicode amd64-unicode; do
+            grep -qx "Plugins/$target/HelloC.dll" <<< "$listing"
+          done
+          grep -qx "LICENSE" <<< "$listing"
+          grep -qx "README.md" <<< "$listing"
+          ! grep -q '^Contrib/' <<< "$listing"
+
+  crt-none:
+    name: Plugin without CRT / ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { toolchain: msvc, os: windows-latest }
+          - { toolchain: mingw, os: ubuntu-latest }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: build-plugin
+
+      # Another name, so its build artifact doesn't clash with the plugin job's
+      - name: Copy test plugin as HelloNoCrt
+        shell: bash
+        run: |
+          cp -r build-plugin/test/hello/. .
+          mv Contrib/HelloC Contrib/HelloNoCrt
+
+      - name: Build
+        uses: ./build-plugin
+        with:
+          name: HelloNoCrt
+          sources: Contrib/HelloNoCrt/*.c
+          targets: x86-unicode,amd64-unicode
+          toolchain: ${{ matrix.toolchain }}
+          crt: none
+
+  mingw-arm64-rejected:
+    name: Reject arm64 / mingw
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: build-plugin
+
+      - name: Copy test plugin
+        shell: bash
+        run: cp -r build-plugin/test/hello/. .
+
+      - name: Build
+        id: build
+        continue-on-error: true
+        uses: ./build-plugin
+        with:
+          name: HelloC
+          sources: Contrib/HelloC/*.c
+          targets: arm64-unicode
+          toolchain: mingw
+
+      - name: Check the step failed
+        shell: bash
+        run: '[ "${{ steps.build.outcome }}" = failure ]'
+
+  # build-plugin itself has no Contrib/HelloC/
+  layout-rejected:
+    name: Reject layout
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build
+        id: build
+        continue-on-error: true
+        uses: ./
+        with:
+          name: HelloC
+          sources: test/hello/Contrib/HelloC/*.c
+          toolchain: mingw
+
+      - name: Check the step failed
+        shell: bash
+        run: '[ "${{ steps.build.outcome }}" = failure ]'
