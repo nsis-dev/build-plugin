@@ -1,6 +1,6 @@
 [tools]
 actionlint = "latest"
-hk = "latest"
+"aqua:jdx/hk" = "latest"
 pkl = "latest"
 ruff = "latest"
 
