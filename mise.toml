@@ -2,9 +2,11 @@
 actionlint = "latest"
 hk = "latest"
 pkl = "latest"
+ruff = "latest"
+
 # Oldest Python on the GitHub runners the actions run on
 python = "3.12"
-ruff = "latest"
+
 # Not called directly; actionlint runs it on the run: blocks in the workflows
 shellcheck = "latest"
 

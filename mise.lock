@@ -49,6 +49,11 @@ url = "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_
 url_api = "https://api.github.com/repos/rhysd/actionlint/releases/assets/384924919"
 provenance = "github-attestations"
 
+[[tools.hk]]
+version = "1.56.1"
+backend = "aqua:jdx/hk"
+specifiers = ["latest"]
+
 [[tools.pkl]]
 version = "0.32.1"
 backend = "aqua:apple/pkl"
