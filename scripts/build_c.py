@@ -172,9 +172,13 @@ def build_msvc(cfg, arch, unicode, dll, objdir):
         *[f"{lib}.lib" for lib in LIBS],
     ]
     if cfg["crt"] == "none":
-        # Decorated on x86 like the mingw entry; the linker's own undecorated lookup misses C++ objects
-        entry = "DllMain@12" if arch == "x86" else "DllMain"
-        link += ["/NODEFAULTLIB", f"/ENTRY:{entry}"]
+        link.append("/NODEFAULTLIB")
+        # /Zl predefines _VC_NODEFAULTLIB, which Plugins use to rename DllMain to the linker's default entry
+        if not any(
+            "_DllMainCRTStartup" in Path(s).read_text(errors="ignore")
+            for s in cfg["sources"]
+        ):
+            link.append("/ENTRY:DllMain")
     else:
         # A Plugin defining its own _DllMainCRTStartup keeps libcmt's startup object,
         # and with it these defaultlib references, out of the link
