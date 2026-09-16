@@ -251,7 +251,7 @@ def build_mingw(cfg, arch, unicode, dll, objdir):
 def resolve():
     toolchain, targets, crt = (
         env("TOOLCHAIN", "msvc"),
-        split(env("TARGETS", "x86-ansi,x86-unicode")),
+        split(env("TARGETS", "x86-unicode,amd64-unicode")),
         env("CRT", "static"),
     )
     check_inputs(toolchain, targets, crt)
@@ -267,7 +267,7 @@ def resolve():
 def build():
     toolchain, targets, crt = (
         env("TOOLCHAIN", "msvc"),
-        split(env("TARGETS", "x86-ansi,x86-unicode")),
+        split(env("TARGETS", "x86-unicode,amd64-unicode")),
         env("CRT", "static"),
     )
     check_inputs(toolchain, targets, crt)

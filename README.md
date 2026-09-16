@@ -94,15 +94,15 @@ A Plugin repository is laid out like NSISDIR. The action checks this first and f
 
 ## Inputs
 
-| Name        | Default                | Description                                                                                                   |
-| ----------- | ---------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `name`      |                        | Plugin name, i.e. the DLL basename scripts call as `Name::Func`.                                              |
-| `sources`   |                        | `msvc` and `mingw` only: C/C++ source globs (`.c`, `.cpp`, `.cxx`, `.cc`, `.rc`).                             |
-| `project`   |                        | `fpc` and `rust` only: path of the Pascal project file (`.dpr`, `.lpr`, `.pas`) or the plugin's `Cargo.toml`. |
-| `targets`   | `x86-ansi,x86-unicode` | Any of `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`.                                           |
-| `toolchain` | `msvc`                 | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner.                                       |
-| `crt`       | `static`               | C/C++ only: `static` links the C runtime in; `none` builds without it, entry point `DllMain`.                 |
-| `release`   | `true`                 | Attach the files to the release that triggered the run.                                                       |
+| Name        | Default                     | Description                                                                                                   |
+| ----------- | --------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `name`      |                             | Plugin name, i.e. the DLL basename scripts call as `Name::Func`.                                              |
+| `sources`   |                             | `msvc` and `mingw` only: C/C++ source globs (`.c`, `.cpp`, `.cxx`, `.cc`, `.rc`).                             |
+| `project`   |                             | `fpc` and `rust` only: path of the Pascal project file (`.dpr`, `.lpr`, `.pas`) or the plugin's `Cargo.toml`. |
+| `targets`   | `x86-unicode,amd64-unicode` | Any of `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`. `x86-ansi` is opt-in.                     |
+| `toolchain` | `msvc`                      | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner.                                       |
+| `crt`       | `static`                    | C/C++ only: `static` links the C runtime in; `none` builds without it, entry point `DllMain`.                 |
+| `release`   | `true`                      | Attach the files to the release that triggered the run.                                                       |
 
 Each Toolchain takes exactly one of `sources` and `project`; the action fails before building if the other one is set.
 List inputs are comma or newline separated, so paths may contain spaces.

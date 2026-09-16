@@ -87,14 +87,14 @@ def find_dll(messages, manifest):
 
 
 def resolve():
-    check_inputs(split(env("TARGETS", "x86-ansi,x86-unicode")))
+    check_inputs(split(env("TARGETS", "x86-unicode,amd64-unicode")))
     # No Plugin API to fetch, but the installer is still compiled with the pinned NSIS
     set_output("version", PINNED_NSIS_VERSION)
     set_output("output-dir", Path(env("OUTPUT_DIR", "out")).resolve())
 
 
 def build():
-    targets = split(env("TARGETS", "x86-ansi,x86-unicode"))
+    targets = split(env("TARGETS", "x86-unicode,amd64-unicode"))
     check_inputs(targets)
     name = env("NAME")
     if not name:

@@ -111,7 +111,7 @@ def fpc_command(cfg, arch, unicode, dll, objdir):
 
 
 def resolve():
-    check_inputs(split(env("TARGETS", "x86-ansi,x86-unicode")))
+    check_inputs(split(env("TARGETS", "x86-unicode,amd64-unicode")))
     temp = Path(env("RUNNER_TEMP", tempfile.gettempdir()))
     set_output("version", PINNED_NSIS_VERSION)
     set_output("plugin-api", temp / f"nsis-plugin-api-{PINNED_NSIS_VERSION}")
@@ -121,7 +121,7 @@ def resolve():
 
 
 def build():
-    targets = split(env("TARGETS", "x86-ansi,x86-unicode"))
+    targets = split(env("TARGETS", "x86-unicode,amd64-unicode"))
     check_inputs(targets)
     name = env("NAME")
     if not name:

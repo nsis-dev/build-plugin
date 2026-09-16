@@ -15,7 +15,7 @@ inputs:
     description: fpc and rust only; path of the Pascal project file (.dpr, .lpr, .pas) or the plugin's Cargo.toml
   targets:
     description: x86-ansi, x86-unicode, amd64-unicode, arm64-unicode
-    default: x86-ansi,x86-unicode
+    default: x86-unicode,amd64-unicode
   toolchain:
     description: msvc, fpc or rust (Windows runner), mingw (Linux runner)
     default: msvc
