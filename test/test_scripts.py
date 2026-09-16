@@ -2,7 +2,6 @@
 """Self-check for the action scripts. Run: python3 test/test_scripts.py"""
 
 # The scripts are imported after scripts/ is put on the path
-# ruff: noqa: E402
 
 import os
 import re
@@ -16,11 +15,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import archive
-import common
 import build_c as build
 import build_pascal as pascal
 import build_rust as rust
 import check_layout
+import common
 import installer
 import toolchain
 
@@ -157,7 +156,7 @@ def test_step_outputs():
                 "RUNNER_TEMP": tmp,
                 "OUTPUT_DIR": tmp,
                 "GITHUB_OUTPUT": str(outputs),
-                entry.takes.upper(): "Contrib/Hello/hello" + sorted(entry.exts)[0],
+                entry.takes.upper(): "Contrib/Hello/hello" + min(entry.exts),
             }
             with mock.patch.dict(os.environ, environ, clear=True):
                 toolchain.main("resolve")

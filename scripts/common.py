@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Helpers every action script shares: inputs, outputs, the Plugin API and DLL checks.
 
 Not run directly; imported by the build, archive, installer and layout scripts.
