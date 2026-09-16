@@ -172,7 +172,13 @@ def build_msvc(cfg, arch, unicode, dll, objdir):
         *[f"{lib}.lib" for lib in LIBS],
     ]
     if cfg["crt"] == "none":
-        link += ["/NODEFAULTLIB", "/ENTRY:DllMain"]
+        # Decorated on x86 like the mingw entry; the linker's own undecorated lookup misses C++ objects
+        entry = "DllMain@12" if arch == "x86" else "DllMain"
+        link += ["/NODEFAULTLIB", f"/ENTRY:{entry}"]
+    else:
+        # A Plugin defining its own _DllMainCRTStartup keeps libcmt's startup object,
+        # and with it these defaultlib references, out of the link
+        link += ["libvcruntime.lib", "libucrt.lib"]
 
     run(
         [
@@ -224,6 +230,8 @@ def build_mingw(cfg, arch, unicode, dll, objdir):
             f"{prefix}-gcc",
             "-shared",
             "-Os",
+            # Plugins that declare the Plugin API globals themselves link under MSVC; GCC 10+ needs this to match
+            "-fcommon",
             "-Wl,--kill-at",
             *flags,
             *cfg["sources"],
