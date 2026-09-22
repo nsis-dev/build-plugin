@@ -25,6 +25,9 @@ inputs:
   release:
     description: Attach the files to the release that triggered the run; false for a check build with another toolchain
     default: "true"
+  attestations:
+    description: Attest build provenance of the released files; needs GitHub Team or Enterprise on a private repository
+    default: "true"
 
 outputs:
   plugins-dir:
@@ -132,7 +135,7 @@ runs:
       run: sha256sum -- * > SHA256SUMS
 
     - name: Attest build provenance
-      if: inputs.release == 'true' && github.event_name == 'release'
+      if: inputs.release == 'true' && inputs.attestations == 'true' && github.event_name == 'release'
       uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
       with:
         # The DLLs ship compressed inside the archive and the installer, so their own

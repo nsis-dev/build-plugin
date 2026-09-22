@@ -50,6 +50,7 @@ A release of tag `v1.0.0` gets these assets:
 
 Other builds upload the zip and installer as the workflow artifact `<name>-<toolchain>`, versioned by the short commit SHA.
 Check where a released file came from with `gh attestation verify Hello-1.0.0.zip --repo <owner>/<repo>`.
+Attestations are free on public repositories; on a private one they need GitHub Team or Enterprise, so set `attestations: false` and drop the `id-token` and `attestations` permissions there.
 
 To also build with a second Toolchain as a check, use a matrix and release only one of them:
 
@@ -103,6 +104,7 @@ A Plugin repository is laid out like NSISDIR. The action checks this first and f
 | `toolchain` | `msvc`                      | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner.                                       |
 | `crt`       | `static`                    | C/C++ only: `static` links the C runtime in; `none` builds without it, entry point `DllMain`.                 |
 | `release`   | `true`                      | Attach the files to the release that triggered the run.                                                       |
+| `attestations` | `true`                   | Attest build provenance. Free on public repositories; a private one needs GitHub Team or Enterprise.          |
 
 Each Toolchain takes exactly one of `sources` and `project`; the action fails before building if the other one is set.
 List inputs are comma or newline separated, so paths may contain spaces.
