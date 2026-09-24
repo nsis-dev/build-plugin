@@ -159,13 +159,18 @@ def build_msvc(cfg, arch, unicode, dll, objdir):
 
     compile_flags = [
         "/nologo",
-        "/LD",
         "/O1",
         "/GS-",
         "/W3",
         "/MT" if cfg["crt"] == "static" else "/Zl",
         *flags,
     ]
+
+    # As a library the Plugin API is only linked when referenced, so Plugins that bring their own stack functions don't collide with it
+    api_obj, api_lib = objdir / "nsis-pluginapi.obj", objdir / "nsis-pluginapi.lib"
+    run([tool("cl"), *compile_flags, "/c", cfg["api"], f"/Fo{api_obj}"], env=vcenv)
+    run([tool("lib"), "/nologo", f"/OUT:{api_lib}", api_obj], env=vcenv)
+
     link = [
         "/link",
         f"/IMPLIB:{objdir / cfg['name']}.lib",
@@ -187,9 +192,10 @@ def build_msvc(cfg, arch, unicode, dll, objdir):
     run(
         [
             tool("cl"),
+            "/LD",
             *compile_flags,
             *cfg["sources"],
-            *cfg["api"],
+            api_lib,
             *res,
             f"/Fo{objdir}{os.sep}",
             f"/Fe{dll}",
@@ -229,17 +235,22 @@ def build_mingw(cfg, arch, unicode, dll, objdir):
         entry = "_DllMain@12" if arch == "x86" else "DllMain"
         link += ["-nostdlib", f"-Wl,-e,{entry}", "-lgcc"]
 
+    # Plugins that declare the Plugin API globals themselves link under MSVC; GCC 10+ needs -fcommon to match
+    compile_flags = ["-Os", "-fcommon", *flags]
+
+    # As an archive the Plugin API is only linked when referenced, so Plugins that bring their own stack functions don't collide with it
+    api_obj, api_lib = objdir / "nsis-pluginapi.o", objdir / "libnsis-pluginapi.a"
+    run([f"{prefix}-gcc", *compile_flags, "-c", cfg["api"], "-o", api_obj])
+    run([f"{prefix}-ar", "rcs", api_lib, api_obj])
+
     run(
         [
             f"{prefix}-gcc",
             "-shared",
-            "-Os",
-            # Plugins that declare the Plugin API globals themselves link under MSVC; GCC 10+ needs this to match
-            "-fcommon",
             "-Wl,--kill-at",
-            *flags,
+            *compile_flags,
             *cfg["sources"],
-            *cfg["api"],
+            api_lib,
             *res,
             "-o",
             dll,
@@ -290,7 +301,7 @@ def build():
         "sources": sources,
         "resources": resources,
         "cxx": cxx,
-        "api": [plugin_api / "nsis" / "pluginapi.c"],
+        "api": plugin_api / "nsis" / "pluginapi.c",
         "include_dirs": include_dirs(sources + resources),
     }
     builder = build_msvc if toolchain == "msvc" else build_mingw
