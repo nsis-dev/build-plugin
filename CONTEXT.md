@@ -28,9 +28,9 @@ The two ways a Plugin points at its code. `msvc` and `mingw` take **sources**, g
 _Avoid_: entry, manifest (except for Cargo's own). "Input" means an `action.yml` input, not the value of one.
 
 **Release Archive**:
-The zip attached to a release, `<Name>-<version>.zip`. It contains the built `Plugins/<target>/<Name>.dll`, whichever of `Docs/`, `Examples/` and `Include/` the repository has, its required top-level LICENSE and a README if there is one, laid out so it unzips into NSISDIR.
+The zip attached to a release, `<Name>-<version>.zip`. It contains the built `Plugins/<target>/<Name>.dll`, whichever of `Docs/`, `Examples/` and `Include/` the repository has, its top-level LICENSE and README if there are any, laid out so it unzips into NSISDIR.
 _Avoid_: bundle, distribution
 
 **Plugin Installer**:
-The Windows installer attached to a release, `<Name>-<version>-setup.exe`. It copies the Release Archive's NSISDIR folders into an existing NSIS installation; the LICENSE is not copied, it is shown on the license page.
+The Windows installer attached to a release, `<Name>-<version>-setup.exe`. It copies the Release Archive's NSISDIR folders into an existing NSIS installation; the LICENSE is not copied, it is shown on the license page. A top-level LICENSE wins; without one, the shallowest one under `Docs/` is shown.
 _Avoid_: setup, package

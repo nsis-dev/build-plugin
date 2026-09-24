@@ -7,7 +7,7 @@ Configured through the environment variable NAME, set by action.yml.
 import sys
 from pathlib import Path
 
-from common import env, is_doc
+from common import env, find_license, is_doc
 from toolchain import SOURCE_EXTS
 
 # Folders that mirror NSISDIR, spelled the way NSIS spells them
@@ -58,15 +58,14 @@ def check(root, name):
                     )
                 )
 
-    docs = [p for p in top.values() if is_doc(p)]
-    if not any(is_doc(p, ("LICENSE", "LICENCE")) for p in docs):
+    if find_license(root) is None:
         errors.append(
             (
                 "LICENSE",
-                "add a top-level LICENSE, it ships in the archive and installer",
+                f"add a LICENSE at the top level or in Docs/{name}/, the installer shows it",
             )
         )
-    if not any(is_doc(p, ("README",)) for p in docs):
+    if not any(is_doc(p, ("README",)) for p in top.values()):
         suggestions.append(
             ("README.md", "consider a top-level README, it ships in the archive")
         )

@@ -242,6 +242,13 @@ def test_stage():
 
         (tree / "LICENSE").unlink()
         raises(common.BuildError, installer.find_license, tree)
+        # Without a top-level one, the shallowest under Docs/ is shown
+        for f in ("Docs/Hello/doc/license.rtf", "Docs/Hello/COPYING"):
+            (tree / f).parent.mkdir(parents=True, exist_ok=True)
+            (tree / f).write_text("")
+        assert installer.find_license(tree) == tree / "Docs/Hello/COPYING"
+        (tree / "UNLICENSE").write_text("")
+        assert installer.find_license(tree) == tree / "UNLICENSE"
         raises(common.BuildError, archive.stage, tree, tmp / "repo", tmp / "repo")
 
 
@@ -264,6 +271,7 @@ def test_check_layout():
     assert layout(*good) == ([], ["README.md"])
     assert layout(*good, "readme.txt", ".git/x.dll") == ([], [])
     assert layout("Contrib/Hello/Hello.dpr")[0] == ["LICENSE"]
+    assert layout("Contrib/Hello/Hello.dpr", "Docs/Hello/License.txt")[0] == []
     assert layout("LICENSE", "Contrib/hello/hello.c")[0] == ["Contrib/Hello"]
     assert layout("LICENSE", "Contrib/Hello/notes.txt")[0] == ["Contrib/Hello"]
     assert layout("LICENSE", "contrib/Hello/a.c")[0] == ["contrib", "Contrib/Hello"]

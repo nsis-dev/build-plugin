@@ -7,13 +7,13 @@ Configured through environment variables set by action.yml.
 import shutil
 from pathlib import Path
 
-from common import BuildError, env, guard, is_doc, run, set_output
+import common
+from common import BuildError, env, guard, run, set_output
 
 
 def find_license(tree):
-    """First top-level LICENSE or LICENCE file; a Plugin is required to have one."""
-    licenses = (p for p in sorted(tree.iterdir()) if is_doc(p, ("LICENSE", "LICENCE")))
-    license = next(licenses, None)
+    """The license shown on the installer's page; a Plugin is required to have one."""
+    license = common.find_license(tree)
     if license is None:
         raise BuildError(f"{tree} has no LICENSE, the installer shows it on its page")
     return license

@@ -54,9 +54,25 @@ def set_output(name, value):
             f.write(f"{name}={value}\n")
 
 
-def is_doc(path, stems=("LICENSE", "LICENCE", "README")):
+LICENSE_STEMS = ("LICENSE", "LICENCE", "COPYING", "UNLICENSE")
+
+
+def is_doc(path, stems=LICENSE_STEMS + ("README",)):
     """LICENSE, License.md, readme.txt and the like."""
     return path.is_file() and path.name.split(".")[0].upper() in stems
+
+
+def find_license(root):
+    """First top-level license file, else the shallowest one under Docs/; None if neither."""
+    top = sorted(p for p in root.iterdir() if is_doc(p, LICENSE_STEMS))
+    docs = root / "Docs"
+    nested = sorted(
+        (p for p in docs.rglob("*") if is_doc(p, LICENSE_STEMS))
+        if docs.is_dir()
+        else (),
+        key=lambda p: (len(p.parts), p),
+    )
+    return next(iter(top + nested), None)
 
 
 def rss_md5(rss, filename):

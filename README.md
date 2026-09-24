@@ -84,7 +84,7 @@ A Plugin repository is laid out like NSISDIR. The action checks this first and f
 | Path                | Rule                                                       |
 | ------------------- | ---------------------------------------------------------- |
 | `Contrib/<name>/`   | **Required**, holds the source, not shipped                   |
-| `LICENSE`           | **Required** at the top level, any extension, or `LICENCE`    |
+| `LICENSE`           | **Required** at the top level or in `Docs/<name>/`, any extension, or `LICENCE`, `COPYING`, `UNLICENSE` |
 | `README`            | Suggested at the top level, any extension                     |
 | `Docs/<name>/`      | Optional, nothing else in `Docs/`, ships as-is                |
 | `Examples/<name>/`  | Optional, nothing else in `Examples/`, ships as-is            |
