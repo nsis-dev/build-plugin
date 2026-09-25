@@ -56,6 +56,11 @@ jobs:
             plugin: HelloC
             sources: Contrib/HelloC/*.c
             targets: x86-ansi,x86-unicode,amd64-unicode
+          - toolchain: zig
+            os: ubuntu-latest
+            plugin: HelloC
+            sources: Contrib/HelloC/*.c
+            targets: x86-ansi,x86-unicode,amd64-unicode,arm64-unicode
           - toolchain: fpc
             os: windows-latest
             plugin: HelloPascal
@@ -126,6 +131,8 @@ jobs:
         include:
           - { toolchain: msvc, os: windows-latest }
           - { toolchain: mingw, os: ubuntu-latest }
+          # On Windows here, so Zig's .zip download is covered too; the plugin job builds it on Linux
+          - { toolchain: zig, os: windows-latest }
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

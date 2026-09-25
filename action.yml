@@ -10,14 +10,14 @@ inputs:
     description: Plugin name, i.e. the DLL basename scripts call as Name::Func
     required: true
   sources:
-    description: msvc and mingw only; C/C++ source globs (.c, .cpp, .cxx, .cc, .rc)
+    description: msvc, mingw and zig only; C/C++ source globs (.c, .cpp, .cxx, .cc, .rc)
   project:
     description: fpc and rust only; path of the Pascal project file (.dpr, .lpr, .pas) or the plugin's Cargo.toml
   targets:
     description: x86-ansi, x86-unicode, amd64-unicode, arm64-unicode
     default: x86-unicode,amd64-unicode
   toolchain:
-    description: msvc, fpc or rust (Windows runner), mingw (Linux runner)
+    description: msvc, fpc or rust (Windows runner), mingw (Linux runner), zig (any runner)
     default: msvc
   crt:
     description: C/C++ only; static (link the C runtime statically) or none (no CRT, entry point DllMain)
@@ -78,6 +78,14 @@ runs:
         path: ${{ steps.vars.outputs.fpc-dir }}
         key: fpc-${{ steps.vars.outputs.fpc-version }}-win32-win64
 
+    # Also holds Zig's global cache, so the mingw-w64 CRT it builds per target is kept too
+    - name: Restore cached Zig
+      if: inputs.toolchain == 'zig'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.vars.outputs.zig-dir }}
+        key: zig-${{ steps.vars.outputs.zig-version }}-${{ runner.os }}-${{ runner.arch }}
+
     - name: Build
       shell: bash
       env:
@@ -89,6 +97,7 @@ runs:
         CRT: ${{ inputs.crt }}
         PLUGIN_API: ${{ steps.vars.outputs.plugin-api }}
         FPC_DIR: ${{ steps.vars.outputs.fpc-dir }}
+        ZIG_DIR: ${{ steps.vars.outputs.zig-dir }}
         OUTPUT_DIR: ${{ steps.vars.outputs.output-dir }}
         PY: ${{ steps.vars.outputs.python }}
       run: '"$PY" "$GITHUB_ACTION_PATH/scripts/toolchain.py" build'

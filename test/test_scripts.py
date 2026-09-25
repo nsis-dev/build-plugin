@@ -40,6 +40,7 @@ def test_split():
 def test_check_inputs():
     build.check_inputs("mingw", ["x86-ansi", "amd64-unicode"], "static")
     build.check_inputs("msvc", ["arm64-unicode"], "none")
+    build.check_inputs("zig", ["x86-ansi", "arm64-unicode"], "none")
     raises(build.BuildError, build.check_inputs, "mingw", ["arm64-unicode"], "static")
     raises(build.BuildError, build.check_inputs, "msvc", ["x64-ansi"], "static")
     raises(build.BuildError, build.check_inputs, "msvc", ["x86-ansi"], "dynamic")
@@ -65,6 +66,25 @@ def test_expand_sources():
         raises(build.BuildError, build.expand_sources, [f"{tmp}/nope/*.c"])
         raises(build.BuildError, build.expand_sources, [f"{tmp}/src/*.txt"])
         raises(build.BuildError, build.expand_sources, [f"{tmp}/src/*.rc"])
+
+
+def test_zig_release():
+    # Shape of https://ziglang.org/download/index.json
+    index = {
+        "0.16.0": {
+            "x86_64-linux": {
+                "tarball": "https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz",
+                "shasum": "70e4",
+                "size": 1,
+            }
+        }
+    }
+    assert build.zig_release(index, "0.16.0", "x86_64-linux") == (
+        "https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz",
+        "70e4",
+    )
+    raises(build.BuildError, build.zig_release, index, "0.16.0", "x86_64-windows")
+    raises(build.BuildError, build.zig_release, index, "0.15.2", "x86_64-linux")
 
 
 def test_pascal_inputs():
@@ -130,6 +150,8 @@ def test_toolchain_inputs():
     check = toolchain.check_inputs
     check("msvc", "a/*.c", "", "Windows")
     check("mingw", "a/*.c", "", "Linux")
+    for runner_os in ("Linux", "Windows", "macOS"):
+        check("zig", "a/*.c", "", runner_os)
     check("fpc", "", "a/Hello.dpr")
     check("rust", "", "a/Cargo.toml")
     raises(common.BuildError, check, "gcc", "a/*.c", "")

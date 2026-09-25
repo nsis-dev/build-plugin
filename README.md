@@ -98,10 +98,10 @@ A Plugin repository is laid out like NSISDIR. The action checks this first and f
 | Name        | Default                     | Description                                                                                                   |
 | ----------- | --------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `name`      |                             | Plugin name, i.e. the DLL basename scripts call as `Name::Func`.                                              |
-| `sources`   |                             | `msvc` and `mingw` only: C/C++ source globs (`.c`, `.cpp`, `.cxx`, `.cc`, `.rc`).                             |
+| `sources`   |                             | `msvc`, `mingw` and `zig` only: C/C++ source globs (`.c`, `.cpp`, `.cxx`, `.cc`, `.rc`).                      |
 | `project`   |                             | `fpc` and `rust` only: path of the Pascal project file (`.dpr`, `.lpr`, `.pas`) or the plugin's `Cargo.toml`. |
 | `targets`   | `x86-unicode,amd64-unicode` | Any of `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`. `x86-ansi` is opt-in.                     |
-| `toolchain` | `msvc`                      | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner.                                       |
+| `toolchain` | `msvc`                      | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner, `zig` on any runner.                  |
 | `crt`       | `static`                    | C/C++ only: `static` links the C runtime in; `none` builds without it, entry point `DllMain`.                 |
 | `release`   | `true`                      | Attach the files to the release that triggered the run.                                                       |
 | `attestations` | `true`                   | Attest build provenance. Free on public repositories; a private one needs GitHub Team or Enterprise.          |
@@ -114,7 +114,7 @@ There are deliberately no inputs for defines, libraries, include directories or 
 - Every directory holding a matched source is an include directory.
 - A fixed list of common Windows import libraries is linked; unused ones add no imports. If a Plugin needs one that's missing, open an issue.
 - Put defines in a header.
-- The NSIS version of the Plugin API and the Free Pascal version are pinned, and only change in a build-plugin release.
+- The NSIS version of the Plugin API, the Free Pascal version and the Zig version are pinned, and only change in a build-plugin release.
 
 ## Outputs
 
@@ -138,9 +138,19 @@ Include the Plugin API the way NSIS installs it:
 `pluginapi.c` is compiled in. `UNICODE` and `_UNICODE` are defined for `*-unicode` targets. A C++ plugin needs `extern "C"` on its exported functions.
 
 > [!NOTE]
-> `arm64-unicode` builds with `msvc` only; Ubuntu's MinGW has no arm64 compiler.
+> `arm64-unicode` builds with `msvc` and `zig`; Ubuntu's MinGW has no arm64 compiler.
 > Official NSIS releases only ship x86 stubs, so amd64 and arm64 plugins need a
 > self-built makensis to be used.
+
+The C/C++ Toolchains differ in which C runtime a `crt: static` Plugin depends on:
+
+| Toolchain | C runtime                                                                                                 |
+| --------- | --------------------------------------------------------------------------------------------------------- |
+| `msvc`    | Linked into the DLL.                                                                                      |
+| `mingw`   | Imported from `msvcrt.dll`, which every Windows has.                                                      |
+| `zig`     | Imported from the Universal CRT, built into Windows 10 and later; Vista to 8.1 need update KB2999226.     |
+
+With `crt: none` no Toolchain imports a C runtime. `zig` then leaves `uuid` out of the linked libraries, so a Plugin using COM GUIDs such as `IID_IUnknown` defines them itself with `INITGUID`.
 
 ### Pascal
 
